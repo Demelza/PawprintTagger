@@ -1,0 +1,33 @@
+{
+  "manifest_version": 2,
+  "name": "Pawprint Tagger",
+  "version": "0.1.0",
+  "description": "Add original images and their existing tags from Danbooru and Gelbooru to your Pawprint Tagger library.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "pawprint-tagger@pawprint.local",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": { "required": ["websiteContent", "browsingActivity"] }
+    },
+    "gecko_android": { "strict_min_version": "142.0" }
+  },
+  "permissions": ["downloads", "nativeMessaging", "storage", "activeTab", "cookies"],
+  "background": { "scripts": ["booru.js", "transfer.js", "background.js"], "persistent": true },
+  "content_scripts": [{
+    "matches": [
+      "https://danbooru.donmai.us/posts/*",
+      "https://safebooru.donmai.us/posts/*",
+      "https://gelbooru.com/index.php*",
+      "https://www.gelbooru.com/index.php*"
+    ],
+    "js": ["booru.js", "content.js"],
+    "run_at": "document_idle"
+  }],
+  "browser_action": {
+    "default_title": "Add to Pawprint Tagger",
+    "default_popup": "popup.html",
+    "default_icon": "icon.svg"
+  },
+  "icons": { "48": "icon.svg", "96": "icon.svg" },
+  "content_security_policy": "script-src 'self'; object-src 'none'"
+}

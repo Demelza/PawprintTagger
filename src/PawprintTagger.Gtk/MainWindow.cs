@@ -56,13 +56,15 @@ internal sealed class MainWindow : Window
     private bool _refreshing;
     private bool _thumbnailUpdateQueued;
     private bool _closing;
+    private BrowserImportServer? _browserServer;
+    private int _browserImports;
 
     internal string LibraryFolder => _library.Folder;
     internal int VisibleImageCount => _filtered.Length;
     internal bool ViewerVisible => _pages.VisibleChildName == "viewer";
     internal bool ViewerHasImage => _viewer.HasImage;
     internal int LoadedThumbnailCount => _loaded.Count;
-    internal bool IsImportRunning => _importCancel is not null;
+    internal bool IsImportRunning => _importCancel is not null || _browserImports > 0;
     internal IconView ImageGrid => _images;
     internal CellRendererToggle AssignmentToggle => _assignmentToggle;
     internal bool GalleryFitsViewport => _imageScroll.Hadjustment.Upper <= _imageScroll.Hadjustment.PageSize + 1;
@@ -134,6 +136,14 @@ internal sealed class MainWindow : Window
             else CloseApp();
         };
         RefreshAll();
+        try
+        {
+            // Use the user's normal settings identity even for --library windows, so imports reach the open library.
+            _browserServer = new BrowserImportServer(BrowserImportServer.PipeName(settingsPath ?? AppSettings.DefaultSettingsPath),
+                HandleBrowserRequest);
+        }
+        catch (IOException ex)
+        { _status.Text = "Browser imports are handled by another Pawprint Tagger window: " + ex.Message; }
     }
 
     private Widget BuildLibraryView()
@@ -601,7 +611,7 @@ internal sealed class MainWindow : Window
         else if ((args.Event.State & Gdk.ModifierType.ControlMask) != 0)
         {
             if (args.Event.Key is Gdk.Key.f or Gdk.Key.F) { _search.GrabFocus(); args.RetVal = true; }
-            if (args.Event.Key is Gdk.Key.o or Gdk.Key.O && _importCancel is null) { ChooseImages(); args.RetVal = true; }
+            if (args.Event.Key is Gdk.Key.o or Gdk.Key.O && !IsImportRunning) { ChooseImages(); args.RetVal = true; }
         }
     }
 
@@ -655,7 +665,7 @@ internal sealed class MainWindow : Window
 
     internal void StartImport(string[] files)
     {
-        if (_importCancel is not null) return;
+        if (_importCancel is not null || _browserImports > 0) return;
         _importCancel = new();
         _importButton.Sensitive = false;
         _folderButton.Sensitive = false;
@@ -687,8 +697,8 @@ internal sealed class MainWindow : Window
             _importCancel?.Dispose();
             _importCancel = null;
             if (_closing) { CloseApp(); return; }
-            _importButton.Sensitive = true;
-            _folderButton.Sensitive = true;
+            _importButton.Sensitive = _browserImports == 0;
+            _folderButton.Sensitive = _browserImports == 0;
             _progress.Hide();
             _cancelImport.Hide();
             RefreshAll();
@@ -706,8 +716,52 @@ internal sealed class MainWindow : Window
     private sealed class ImportUiProgress(Action<ImportProgress> report) : IProgress<ImportProgress>
     { public void Report(ImportProgress value) => report(value); }
 
+    private Task<BrowserReply> HandleBrowserRequest(BrowserRequest request)
+    {
+        var completion = new TaskCompletionSource<BrowserReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+        GtkDispatcher.Post(() => _ = ImportFromBrowser(request, completion));
+        return completion.Task;
+    }
+
+    private async Task ImportFromBrowser(BrowserRequest request, TaskCompletionSource<BrowserReply> completion)
+    {
+        if (_closing) { completion.SetResult(BrowserReply.Failure("Pawprint Tagger is closing. Try again after it closes.")); return; }
+        try { BrowserHost.Validate(request); }
+        catch (Exception ex) when (ex is InvalidDataException or ArgumentException)
+        { completion.SetResult(BrowserReply.Failure(ex.Message)); return; }
+        if (request.Action == "ping")
+        { completion.SetResult(new(true, "ready", LibraryFolder: _library.Folder)); return; }
+        _browserImports++;
+        _importButton.Sensitive = false;
+        _folderButton.Sensitive = false;
+        _status.Text = "Importing original image and tags from " + request.Post!.Site + "…";
+        var library = _library;
+        BrowserReply reply;
+        try { reply = await Task.Run(() => BrowserHost.ImportAsync(library, request)).ConfigureAwait(false); }
+        catch (Exception ex) { reply = BrowserReply.Failure(ex.Message); }
+        GtkDispatcher.Post(() =>
+        {
+            _browserImports--;
+            completion.SetResult(reply);
+            if (_closing)
+            {
+                if (_browserImports == 0 && _importCancel is null) CloseApp();
+                return;
+            }
+            _importButton.Sensitive = _importCancel is null && _browserImports == 0;
+            _folderButton.Sensitive = _importButton.Sensitive;
+            if (reply.Ok)
+            {
+                RefreshAll();
+                _status.Text = $"{(reply.Status == "imported" ? "Imported" : "Updated")} from {request.Post!.Site} · {reply.TagCount} booru tags";
+            }
+            else _status.Text = "Browser import failed: " + reply.Error;
+        });
+    }
+
     private void ChooseLibrary()
     {
+        if (IsImportRunning || _closing) return;
         using var dialog = new FileChooserDialog("Open or create a library folder", this, FileChooserAction.SelectFolder,
             "Cancel", ResponseType.Cancel, "Use folder", ResponseType.Accept);
         dialog.SetCurrentFolder(_library.Folder);
@@ -719,6 +773,12 @@ internal sealed class MainWindow : Window
         var folder = dialog.Filename;
         dialog.Destroy();
         if (!accepted || string.IsNullOrEmpty(folder) || IOPath.GetFullPath(folder) == _library.Folder) return;
+        // A browser import can start while the modal folder chooser runs its GTK loop.
+        if (IsImportRunning || _closing)
+        {
+            _status.Text = "Finish the current import before switching libraries.";
+            return;
+        }
         LibraryStore? next = null;
         try
         {
@@ -763,6 +823,13 @@ internal sealed class MainWindow : Window
     internal void CloseApp()
     {
         _closing = true;
+        if (_browserImports > 0 || _importCancel is not null)
+        {
+            _importCancel?.Cancel();
+            _status.Text = "Finishing the current import before closing…";
+            return;
+        }
+        _browserServer?.Dispose();
         _searchTimer?.Dispose();
         _viewerTimer?.Dispose();
         _thumbnailsCancel.Cancel();

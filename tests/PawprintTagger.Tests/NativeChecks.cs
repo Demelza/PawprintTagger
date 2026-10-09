@@ -28,7 +28,8 @@ internal static class NativeChecks
         var category = library.SaveTag(null, "Appearance", null, true, "#729FCF");
         var hair = library.SaveTag(null, "Hair", category.Id, true, null);
         var tag = library.SaveTag(null, "Blonde hair", hair.Id, false, null);
-        var window = new MainWindow(library, null);
+        var settingsPath = fixture.PathFor("config/pawprint-tagger/settings.json");
+        var window = new MainWindow(library, settingsPath);
         window.ShowAll();
         var result = 0;
         GtkDispatcher.Post(() => _ = CheckWindow());
@@ -146,6 +147,14 @@ internal static class NativeChecks
                 Check.True(await OnGtk(() => window.LoadedThumbnailCount is > 0 and < 80),
                     "The gallery retained thumbnails outside the viewport.");
                 Console.WriteLine("PASS Native GTK responsive grid and bounded thumbnails after scrolling 182 images");
+                var booru = BrowserChecks.Post("danbooru", "321", new[] { new BooruTag("blue_background", "general") });
+                var browserReply = await BrowserHost.HandleAsync(new(1, "import", first, "danbooru-321.png", booru), settingsPath);
+                Check.True(browserReply.Ok && browserReply.LibraryFolder == library.Folder, "Browser import did not reach the open GTK library.");
+                await WaitFor(() => !window.IsImportRunning);
+                var taggedImage = library.Snapshot.Images.Single(image => image.Id == browserReply.ImageId);
+                Check.True(taggedImage.TagIds.Any(id => library.Snapshot.Tags.Single(tag => tag.Id == id).Name == "blue_background"),
+                    "The open window did not receive the browser tags.");
+                Console.WriteLine("PASS Native GTK browser import updates the active library and reuses existing image bytes");
             }
             catch (Exception ex) { result = 1; Console.Error.WriteLine(ex); }
             finally { await OnGtk(() => window.CloseApp()); }

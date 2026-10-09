@@ -3,7 +3,10 @@ namespace PawprintTagger.Core;
 public sealed record TagNode(Guid Id, string Name, Guid? ParentId, bool IsCategory, string? Color = null);
 
 public sealed record LibraryImage(Guid Id, string OriginalName, string StoredName, string Sha256,
-    int Width, int Height, long FileSize, DateTimeOffset ImportedAt, IReadOnlyList<Guid> TagIds);
+    int Width, int Height, long FileSize, DateTimeOffset ImportedAt, IReadOnlyList<Guid> TagIds)
+{
+    public IReadOnlyList<BooruSource> Sources { get; init; } = Array.Empty<BooruSource>();
+}
 
 public sealed record LibrarySnapshot(int Version, IReadOnlyList<TagNode> Tags, IReadOnlyList<LibraryImage> Images)
 {

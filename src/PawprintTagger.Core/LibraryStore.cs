@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 namespace PawprintTagger.Core;
 
 /// <summary>A portable catalog and owned image copies, guarded against concurrent writers.</summary>
-public sealed class LibraryStore : IDisposable
+public sealed partial class LibraryStore : IDisposable
 {
     private readonly object _gate = new();
     private readonly SemaphoreSlim _importGate = new(1, 1);
@@ -60,8 +60,8 @@ public sealed class LibraryStore : IDisposable
         {
             ThrowIfDisposed();
             name = name.Trim();
-            if (name.Length is 0 or > 128 || name.Contains('/') || name.Any(char.IsControl))
-                throw new ArgumentException("Use a name of 1–128 characters, without slashes or control characters.");
+            if (name.Length is 0 or > 128 || isCategory && name.Contains('/') || name.Any(char.IsControl))
+                throw new ArgumentException("Use a name of 1–128 characters without control characters. Group names cannot contain slashes.");
             if (color is not null && !Regex.IsMatch(color, "^#[0-9a-fA-F]{6}$"))
                 throw new ArgumentException("Choose a valid color label.");
             if (parentId is { } parent && !_snapshot.Tags.Any(tag => tag.Id == parent && tag.IsCategory))
@@ -194,7 +194,7 @@ public sealed class LibraryStore : IDisposable
     {
         Tags = Array.AsReadOnly(value.Tags.ToArray()),
         Images = Array.AsReadOnly(value.Images.Select(image => image with
-            { TagIds = Array.AsReadOnly(image.TagIds.ToArray()) }).ToArray())
+            { TagIds = Array.AsReadOnly(image.TagIds.ToArray()), Sources = Array.AsReadOnly(image.Sources.ToArray()) }).ToArray())
     };
 
     private static void ValidateStoredName(string name)
@@ -214,7 +214,7 @@ public sealed class LibraryStore : IDisposable
         var tags = value.Tags.ToDictionary(tag => tag.Id);
         foreach (var tag in value.Tags)
         {
-            if (tag.Id == Guid.Empty || string.IsNullOrWhiteSpace(tag.Name) || tag.Name.Contains('/') ||
+            if (tag.Id == Guid.Empty || string.IsNullOrWhiteSpace(tag.Name) || tag.IsCategory && tag.Name.Contains('/') ||
                 tag.Name.Any(char.IsControl) || tag.Name.Length > 128 ||
                 tag.Color is not null && !Regex.IsMatch(tag.Color, "^#[0-9a-fA-F]{6}$") ||
                 tag.ParentId is { } parent && (!tags.TryGetValue(parent, out var parentTag) || !parentTag.IsCategory))
@@ -236,6 +236,9 @@ public sealed class LibraryStore : IDisposable
                 image.FileSize <= 0 || image.Sha256 is null || !Regex.IsMatch(image.Sha256, "^[0-9A-F]{64}$") ||
                 image.TagIds is null || image.TagIds.Any(id => !tags.TryGetValue(id, out var tag) || tag.IsCategory))
                 throw new InvalidDataException("The library contains invalid image metadata.");
+            if (image.Sources is null || image.Sources.Any(source => source is null))
+                throw new InvalidDataException("The library contains invalid image sources.");
+            foreach (var source in image.Sources) source.Validate();
         }
         if (value.Images.Select(image => image.StoredName).Distinct().Count() != value.Images.Count ||
             value.Images.Select(image => image.Sha256).Distinct().Count() != value.Images.Count)

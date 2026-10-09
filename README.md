@@ -2,6 +2,10 @@
 
 A native GTK3 image viewer and tag organizer, written in C# for .NET 10.
 
+A companion [Firefox extension](browser-extension/README.md) adds original
+images and their existing tags from Danbooru and Gelbooru. It supports Firefox
+140 and later on Linux desktop.
+
 ## Build and run
 
 Install the **.NET 10 SDK** and **GTK3 runtime**, then run from this directory:
@@ -125,7 +129,9 @@ dotnet run --project tests/PawprintTagger.Tests/PawprintTagger.Tests.csproj
 
 It checks original preservation, duplicates and filename collisions, tag editing
 and persistence, category filtering, search syntax, cancellation, write failures,
-damaged catalogs, library locking, and settings. It creates isolated temporary
+damaged catalogs, library locking, settings, booru tag/source imports, original
+checksums, native-message framing, active-library routing, and closed-app browser
+imports. It creates isolated temporary
 libraries and does not touch your saved library.
 
 For the native GTK check, run in a graphical desktop session:
@@ -137,7 +143,8 @@ G_DEBUG=fatal-criticals dotnet run --project tests/PawprintTagger.Tests/Pawprint
 This creates real image fixtures and checks import controls, tag checkboxes,
 thumbnails, category/search filtering, image activation, viewing after resize,
 Back, empty results, GTK cleanup, and bounded thumbnail retention while
-scrolling a 182-image library. Optionally set
+scrolling a 182-image library, plus browser imports into the active window.
+Optionally set
 `PAWPRINT_SCREENSHOT=/tmp/pawprint-tagger.png` to capture
 the test window. On a headless machine, run the command under `xvfb-run` if Xvfb
 is installed.

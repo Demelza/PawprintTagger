@@ -7,9 +7,26 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
+        // Firefox invokes this mode without opening a GTK window. Stdout belongs to the binary protocol.
+        if (args.FirstOrDefault() == "--native-messaging")
+            return BrowserHost.RunAsync(Console.OpenStandardInput(), Console.OpenStandardOutput(), AppSettings.DefaultSettingsPath)
+                .GetAwaiter().GetResult();
+        if (args.FirstOrDefault() == "--install-firefox-bridge")
+        {
+            try
+            {
+                if (args.Length > 2) throw new ArgumentException("Usage: PawprintTagger --install-firefox-bridge [manifest-directory]");
+                Console.WriteLine("Firefox bridge registered: " + FirefoxBridgeInstaller.Install(
+                    args.Length == 2 ? args[1] : FirefoxBridgeInstaller.DefaultDirectory));
+                return 0;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or PlatformNotSupportedException)
+            { Console.Error.WriteLine(ex.Message); return 1; }
+        }
         if (args.Contains("--help"))
         {
-            Console.WriteLine("Pawprint Tagger\nUsage: PawprintTagger [--library /absolute/library/folder]\nRequires GTK3 and .NET 10.");
+            Console.WriteLine("Pawprint Tagger\nUsage: PawprintTagger [--library /absolute/library/folder]\n" +
+                "       PawprintTagger --install-firefox-bridge [manifest-directory]\nRequires GTK3 and .NET 10.");
             return 0;
         }
         string? folder = null;

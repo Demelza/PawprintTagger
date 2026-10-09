@@ -1,0 +1,13 @@
+:root { color-scheme: light dark; font: menu; }
+body { width: 340px; margin: 16px; color: CanvasText; background: Canvas; }
+h1 { font-size: 1.25em; margin: 0 0 14px; }
+h2 { font-size: 1em; margin: 18px 0 8px; }
+button { font: inherit; padding: 7px 10px; cursor: pointer; }
+#add { width: 100%; }
+#status { overflow-wrap: anywhere; }
+ul { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; }
+li { border-top: 1px solid GrayText; padding: 8px 0; }
+li p { margin: 4px 0; overflow-wrap: anywhere; }
+li button { margin-top: 4px; }
+.note { font-size: .9em; opacity: .8; }
+a { color: LinkText; }

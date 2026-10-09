@@ -1,0 +1,14 @@
+{
+  "name": "pawprint-tagger-firefox",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "node scripts/test.cjs",
+    "lint": "web-ext lint --source-dir firefox --warnings-as-errors",
+    "build": "node scripts/package.cjs"
+  },
+  "devDependencies": {
+    "linkedom": "0.18.13",
+    "web-ext": "10.7.0"
+  }
+}

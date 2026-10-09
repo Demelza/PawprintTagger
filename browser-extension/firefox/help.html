@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Pawprint Tagger setup</title>
+<style>:root{color-scheme:light dark;font:menu}body{max-width:760px;margin:3em auto;padding:0 1em;line-height:1.6}pre{padding:1em;background:ButtonFace;overflow:auto}a{color:LinkText}</style></head>
+<body>
+<h1>Connect Firefox to Pawprint Tagger</h1>
+<p>In the Pawprint Tagger project folder, run the updated desktop build once to register its Firefox bridge:</p>
+<pre>./artifacts/PawprintTagger/PawprintTagger --install-firefox-bridge</pre>
+<p>Use “Check desktop connection” in the extension popup to confirm the connection.</p>
+<h2>Add an image</h2>
+<p>Open an individual Danbooru or Gelbooru post. Click “Add to Pawprint Tagger” below its original-image or download link, or use the extension toolbar button.</p>
+<p>Firefox downloads the original to its Downloads/PawprintTagger folder with your current session and container cookies. Pawprint Tagger copies it into the open library; if the app is closed, it uses your saved library folder. Existing images receive missing tags without being copied again. Tags keep their booru names and are grouped under Booru → site → category. A unique matching tag already in your library is reused.</p>
+<p>Original images and imported tags are saved together. The original checksum is verified when the post supplies one. A missing original, inaccessible post, or video is reported; a sample is never substituted.</p>
+<h2>Retry an import</h2>
+<p>If a file finished downloading but the desktop import failed, keep the download and use “Retry import” in the popup after resolving the error. You do not need to download it again.</p>
+<h2>Installation</h2>
+<p>This development build can be loaded from <code>about:debugging#/runtime/this-firefox</code> → “Load Temporary Add-on” → select the extension’s manifest.json or XPI file. Firefox removes temporary add-ons when it closes. Permanent installation in regular Firefox requires a Mozilla-signed build.</p>
+<p>The desktop bridge installer supports Linux desktop Firefox. Sandboxed Firefox packages may need their own native-messaging integration. Re-run the registration command after moving the published application.</p>
+<h2>Privacy</h2>
+<p>Images and tags are sent to your local Pawprint Tagger app. The extension contacts only the booru you are viewing and its image servers; there is no remote Pawprint service or telemetry. The cookies permission selects the correct Firefox container for the download; cookies are not sent to Pawprint Tagger. Recent private-window imports stay in memory, while images you explicitly add are saved in your library.</p>
+</body>
+</html>

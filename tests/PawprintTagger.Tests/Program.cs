@@ -14,7 +14,12 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Failed catalog writes do not change the in-memory library", FailedWrites),
     ("Damaged catalogs are rejected without being overwritten", CorruptCatalogs),
     ("A library admits one writer and releases its lock on close", LibraryLock),
-    ("Settings persist a configurable library path", Settings)
+    ("Settings persist a configurable library path", Settings),
+    ("Booru imports preserve original bytes, tag categories, slash tags and source provenance", BrowserChecks.TaggedImports),
+    ("Booru imports verify original checksums and roll back failed catalog writes", BrowserChecks.Failures),
+    ("Browser native messages handle Unicode, partial reads, malformed frames and replies", BrowserChecks.Messages),
+    ("Browser pipe imports use the open library and serialize concurrent requests", BrowserChecks.Pipe),
+    ("Native host imports with the desktop closed without requiring a GTK display", BrowserChecks.ClosedDesktop)
 };
 var failures = 0;
 foreach (var test in tests)
@@ -103,7 +108,7 @@ static async Task InvalidTags()
     Check.Throws<ArgumentException>(() => library.SaveTag(child.Id, "Child", child.Id, true, null));
     Check.Throws<ArgumentException>(() => library.SaveTag(null, "tag", child.Id, false, null));
     Check.Throws<ArgumentException>(() => library.SaveTag(null, "Nested", tag.Id, false, null));
-    Check.Throws<ArgumentException>(() => library.SaveTag(null, "Invalid/name", null, false, null));
+    Check.Throws<ArgumentException>(() => library.SaveTag(null, "Invalid/name", null, true, null));
     Check.Throws<ArgumentException>(() => library.SaveTag(null, "Invalid", null, false, "red"));
     Check.Throws<ArgumentException>(() => library.SaveTag(tag.Id, "Tag", null, true, null));
     await library.ImportAsync(new[] { fixture.Source("a.png", "a") }, _ => new(10, 20));
