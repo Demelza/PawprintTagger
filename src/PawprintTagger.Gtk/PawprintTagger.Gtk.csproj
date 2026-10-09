@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>PawprintTagger</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="GtkSharp" Version="3.24.24.95" />
+    <ProjectReference Include="../PawprintTagger.Core/PawprintTagger.Core.csproj" />
+    <InternalsVisibleTo Include="PawprintTagger.Tests" />
+  </ItemGroup>
+</Project>

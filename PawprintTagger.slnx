@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="src/PawprintTagger.Core/PawprintTagger.Core.csproj" />
+  <Project Path="src/PawprintTagger.Gtk/PawprintTagger.Gtk.csproj" />
+  <Project Path="tests/PawprintTagger.Tests/PawprintTagger.Tests.csproj" />
+</Solution>

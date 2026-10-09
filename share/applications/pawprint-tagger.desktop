@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Pawprint Tagger
+Comment=View and organize images with tags
+Exec=PawprintTagger
+Icon=image-x-generic
+Terminal=false
+Categories=Graphics;Viewer;
+Keywords=Images;Tags;Library;Gallery;
