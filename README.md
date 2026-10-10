@@ -57,7 +57,8 @@ your `PATH`.
   category includes images with any of its descendant tags. **All images**
   clears the tree filter while keeping the search query.
 - Select a thumbnail to see its preview, dimensions, original filename, file
-  size, import date, and tag checklist on the right. Check or uncheck tags to
+  size, import date, and tag checklist on the right. The preview section uses
+  40% of the panel's height and resizes with the window. Check or uncheck tags to
   save assignments immediately. Categories organize tags; they are not assigned
   directly to images.
 - Double-click a thumbnail or press Enter on it to open

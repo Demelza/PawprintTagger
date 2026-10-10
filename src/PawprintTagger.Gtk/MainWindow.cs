@@ -201,22 +201,25 @@ internal sealed class MainWindow : Window
         middle.PackStart(importRow, false, false, 0);
         columns.Attach(middle, 3, 0, 12, 1);
 
-        var right = new Box(Orientation.Vertical, 8) { BorderWidth = 8 };
+        // Five equal rows keep the preview section at 40% as the window resizes.
+        var right = new Grid { RowHomogeneous = true, RowSpacing = 8, BorderWidth = 8, Vexpand = true };
+        var previewSection = new Box(Orientation.Vertical, 8);
         _selectedName.Ellipsize = Pango.EllipsizeMode.End;
         _selectedName.Wrap = false;
-        right.PackStart(_selectedName, false, false, 0);
-        _preview.SetSizeRequest(-1, 100);
-        _preview.Vexpand = false;
-        right.PackStart(_preview, false, false, 0);
+        previewSection.PackStart(_selectedName, false, false, 0);
+        previewSection.PackStart(_preview, true, true, 0);
+        right.Attach(previewSection, 0, 0, 1, 2);
+        var imageInfo = new Box(Orientation.Vertical, 8);
         _details.Selectable = true;
-        right.PackStart(_details, false, false, 0);
-        right.PackStart(new Separator(Orientation.Horizontal), false, false, 0);
-        right.PackStart(Ui.Label("Image tags"), false, false, 0);
-        right.PackStart(Ui.Label("Check tags to assign them to this image."), false, false, 0);
+        imageInfo.PackStart(_details, false, false, 0);
+        imageInfo.PackStart(new Separator(Orientation.Horizontal), false, false, 0);
+        imageInfo.PackStart(Ui.Label("Image tags"), false, false, 0);
+        imageInfo.PackStart(Ui.Label("Check tags to assign them to this image."), false, false, 0);
         var assignmentScroll = new ScrolledWindow();
         assignmentScroll.SetPolicy(PolicyType.Never, PolicyType.Automatic);
         assignmentScroll.Add(_assignments);
-        right.PackStart(assignmentScroll, true, true, 0);
+        imageInfo.PackStart(assignmentScroll, true, true, 0);
+        right.Attach(imageInfo, 0, 2, 1, 3);
         columns.Attach(right, 15, 0, 5, 1);
         root.PackStart(columns, true, true, 0);
         root.PackStart(new Separator(Orientation.Horizontal), false, false, 0);
