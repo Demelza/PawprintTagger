@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace PawprintTagger.Core;
@@ -63,20 +62,10 @@ public sealed class ImageSearch
 
     private static IEnumerable<string> Tokenize(string query)
     {
-        var token = new StringBuilder();
-        var quoted = false;
-        foreach (var character in query)
+        foreach (var token in SearchSyntax.Scan(query))
         {
-            if (character == '"') quoted = !quoted;
-            else if (char.IsWhiteSpace(character) && !quoted)
-            {
-                if (token.Length == 0) continue;
-                yield return token.ToString();
-                token.Clear();
-            }
-            else token.Append(character);
+            if (!token.Closed) throw new ArgumentException("Close the quotation mark in your search.");
+            if (token.Value.Length > 0) yield return token.Value;
         }
-        if (quoted) throw new ArgumentException("Close the quotation mark in your search.");
-        if (token.Length > 0) yield return token.ToString();
     }
 }

@@ -20,6 +20,7 @@ internal sealed class MainWindow : Window
     private readonly TreeView _assignments;
     private readonly CellRendererToggle _assignmentToggle = new() { Activatable = true };
     private readonly SearchEntry _search = new() { PlaceholderText = "Search tags or filenames…" };
+    private readonly TagSearchCompletion _searchSuggestions;
     private readonly Label _results = Ui.Label("");
     private readonly Label _empty = new("Import images to start your library.") { Wrap = true };
     private readonly Stack _gridPages = new();
@@ -69,11 +70,15 @@ internal sealed class MainWindow : Window
     internal CellRendererToggle AssignmentToggle => _assignmentToggle;
     internal bool GalleryFitsViewport => _imageScroll.Hadjustment.Upper <= _imageScroll.Hadjustment.PageSize + 1;
     internal string SearchText { get => _search.Text; set { _search.Text = value; RefreshImages(); } }
+    internal SearchEntry SearchEntry => _search;
+    internal EntryCompletion SearchCompletion => _searchSuggestions.Completion;
+    internal IReadOnlyList<TagSuggestion> SearchSuggestions => _searchSuggestions.CurrentSuggestions;
 
     internal MainWindow(LibraryStore library, string? settingsPath) : base("Pawprint Tagger")
     {
         _library = library;
         _settingsPath = settingsPath;
+        _searchSuggestions = new(_search);
         SetDefaultSize(1280, 800);
         SetSizeRequest(900, 540);
         IconName = "image-x-generic";
@@ -320,6 +325,7 @@ internal sealed class MainWindow : Window
         try
         {
             var snapshot = _library.Snapshot;
+            _searchSuggestions.Refresh(snapshot);
             var expanded = new HashSet<Guid>();
             _tagTree.MapExpandedRows((_, path) =>
             {
@@ -814,6 +820,7 @@ internal sealed class MainWindow : Window
                 "underscores in tag names, or a minus sign to exclude a term. Selecting a category includes all its tags.\n\n" +
                 "tag:\"Blonde hair\"\nAppearance/Hair/Blonde_hair\nfile:holiday -tag:portrait\next:png width:>=1920\nis:untagged\n\n" +
                 "Fields: tag, file, name, ext, width, height, size (bytes), is:untagged.\n\n" +
+                "Type a tag name for suggestions. Use Up/Down and Enter to choose a tag, or click it.\n\n" +
                 "Ctrl+F: search · Ctrl+O: import\nIn image view: Escape: Back · Left/Right: previous/next"
         };
         dialog.Run();
@@ -833,6 +840,7 @@ internal sealed class MainWindow : Window
             return;
         }
         _browserServer?.Dispose();
+        _searchSuggestions.Dispose();
         _searchTimer?.Dispose();
         _viewerTimer?.Dispose();
         _thumbnailsCancel.Cancel();

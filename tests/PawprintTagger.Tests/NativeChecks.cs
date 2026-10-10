@@ -11,8 +11,12 @@ internal static class NativeChecks
     private static extern void gtk_icon_view_item_activated(IntPtr view, IntPtr path);
     [DllImport("libgtk-3.so.0", CallingConvention = CallingConvention.Cdecl)]
     private static extern int gtk_icon_view_get_item_row(IntPtr view, IntPtr path);
+    [DllImport("libgtk-3.so.0", CallingConvention = CallingConvention.Cdecl)]
+    private static extern void gtk_main_do_event(IntPtr keyEvent);
     [DllImport("libgobject-2.0.so.0", CallingConvention = CallingConvention.Cdecl)]
     private static extern void g_signal_emit_by_name(IntPtr instance, string signal, string path);
+    [DllImport("libgobject-2.0.so.0", CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr g_object_ref(IntPtr instance);
     internal static Task<int> Run()
     {
         Application.Init();
@@ -62,6 +66,33 @@ internal static class NativeChecks
                     Check.Equal(120, thumbnail.Height);
                 }
                 Console.WriteLine("PASS Native GTK import, tag assignment, thumbnails and image dimensions");
+
+                await OnGtk(() =>
+                {
+                    window.Present();
+                    window.SearchEntry.GrabFocus();
+                    window.SearchEntry.Text = "ext:png b";
+                    window.SearchEntry.Position = -1;
+                });
+                await WaitFor(() => window.SearchEntry.HasFocus);
+                await OnGtk(() => SendKey(window.SearchEntry, Gdk.Key.l));
+                await WaitFor(() => window.SearchText == "ext:png bl");
+                await WaitFor(() => Window.ListToplevels().Any(popup => popup.Type == WindowType.Popup && popup.Visible));
+                await OnGtk(() =>
+                {
+                    Check.True(window.SearchSuggestions.Any(suggestion => suggestion.Id == tag.Id),
+                        "The GTK popup did not match a tag in a multi-term search.");
+                    SendKey(window.SearchEntry, Gdk.Key.Down);
+                    Check.Equal("ext:png bl", window.SearchText);
+                    SendKey(window.SearchEntry, Gdk.Key.Return);
+                    Check.Equal("ext:png tag:\"Appearance/Hair/Blonde hair\" ", window.SearchText);
+                    Check.Equal(window.SearchText.Length, window.SearchEntry.Position);
+                    window.RefreshImages();
+                    Check.Equal(1, window.VisibleImageCount);
+                    window.ImageGrid.GrabFocus();
+                    window.SearchText = "";
+                });
+                Console.WriteLine("PASS Native GTK tag suggestions and selecting a completion preserve the search query");
 
                 await OnGtk(() => window.FilterCategory(category.Id));
                 Check.Equal(1, await OnGtk(() => window.VisibleImageCount));
@@ -154,10 +185,34 @@ internal static class NativeChecks
                 var taggedImage = library.Snapshot.Images.Single(image => image.Id == browserReply.ImageId);
                 Check.True(taggedImage.TagIds.Any(id => library.Snapshot.Tags.Single(tag => tag.Id == id).Name == "blue_background"),
                     "The open window did not receive the browser tags.");
+                await OnGtk(() =>
+                {
+                    window.SearchEntry.Text = "blue_";
+                    window.SearchEntry.Position = -1;
+                    window.SearchCompletion.Complete();
+                    Check.True(window.SearchSuggestions.Any(suggestion => suggestion.Name == "blue_background"),
+                        "New browser tags were not suggested after the library refreshed.");
+                });
                 Console.WriteLine("PASS Native GTK browser import updates the active library and reuses existing image bytes");
             }
             catch (Exception ex) { result = 1; Console.Error.WriteLine(ex); }
             finally { await OnGtk(() => window.CloseApp()); }
+        }
+    }
+
+    private static void SendKey(Widget widget, Gdk.Key key)
+    {
+        // Dispatch through GTK with a keyboard device, without injecting keys into another application.
+        foreach (var type in new[] { Gdk.EventType.KeyPress, Gdk.EventType.KeyRelease })
+        {
+            var keyEvent = (Gdk.EventKey)Gdk.EventHelper.New(type);
+            g_object_ref(widget.Window.Handle);
+            keyEvent.Window = widget.Window;
+            keyEvent.KeyValue = (uint)key;
+            keyEvent.SendEvent = true;
+            Gdk.EventHelper.SetDevice(keyEvent, Gdk.Display.Default.DefaultSeat.Keyboard);
+            try { gtk_main_do_event(keyEvent.Handle); }
+            finally { Gdk.EventHelper.Free(keyEvent); }
         }
     }
 

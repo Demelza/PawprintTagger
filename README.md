@@ -80,6 +80,13 @@ Words match filenames and full tag paths, case-insensitively. Terms are combined
 with AND. Quote phrases with spaces, or write tag names with underscores.
 A leading minus excludes a term. The tree selection and search are combined.
 
+While typing, a themed dropdown suggests library tags by name or category path.
+Use Up/Down and Enter to choose a suggestion, or click it; Escape dismisses the
+dropdown. Choosing a tag completes the term at the cursor and preserves other
+search terms, including exclusions such as `-tag:`. Suggestions also work with
+booru underscores and quoted names, and update when tags are added, edited, or
+imported. Filename and numeric fields keep their normal behavior.
+
 | Query | Matches |
 | --- | --- |
 | `Blonde_hair` | Filename or tag path containing “blonde hair” |
@@ -89,6 +96,9 @@ A leading minus excludes a term. The tree selection and search are combined.
 | `ext:png width:>=1920 height:>1080` | PNGs meeting both dimension constraints |
 | `is:untagged` | Images without assigned tags |
 | `size:<1048576` | Files smaller than 1 MiB |
+
+Inside quoted values, use `\"` for a literal quotation mark and `\\` for a
+literal backslash. Tag suggestions insert the required quoting automatically.
 
 `name:` is an alias for `file:`. Numeric fields accept `=`, `>`, `>=`, `<`,
 and `<=`; a bare number means equality. The **?** button shows help in the app.
@@ -129,7 +139,8 @@ dotnet run --project tests/PawprintTagger.Tests/PawprintTagger.Tests.csproj
 ```
 
 It checks original preservation, duplicates and filename collisions, tag editing
-and persistence, category filtering, search syntax, cancellation, write failures,
+and persistence, category filtering, search syntax, tag suggestions and completion,
+Unicode and escaped names, cancellation, write failures,
 damaged catalogs, library locking, settings, booru tag/source imports, original
 checksums, native-message framing, active-library routing, and closed-app browser
 imports. It creates isolated temporary
@@ -142,7 +153,8 @@ G_DEBUG=fatal-criticals dotnet run --project tests/PawprintTagger.Tests/Pawprint
 ```
 
 This creates real image fixtures and checks import controls, tag checkboxes,
-thumbnails, category/search filtering, image activation, viewing after resize,
+thumbnails, tag suggestions while typing and keyboard selection, category/search
+filtering, image activation, viewing after resize,
 Back, empty results, GTK cleanup, and bounded thumbnail retention while
 scrolling a 182-image library, plus browser imports into the active window.
 Optionally set
